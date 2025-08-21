@@ -1,0 +1,5 @@
+.env
+database.ini
+game_db_utils
+patientsToText.csv
+config.py

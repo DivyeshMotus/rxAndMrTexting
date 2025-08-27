@@ -5,3 +5,4 @@ patientsToText.csv
 config.py
 readyMessages.csv
 run.sh
+cronjob_log.log

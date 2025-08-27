@@ -88,7 +88,7 @@ def main():
                     # patient_dict = {'Contact_Id': patient['contact_id'], 'Template Name': templateName, 'Text Message': filledTemplate}
                     # readyMessages = pd.concat([readyMessages, pd.DataFrame([patient_dict])], ignore_index = True)
                     print(f"Insurance ID: {patient['story_id']}; Contact ID: {patient['contact_id']}; Template: {templateName}")
-                    # sendMessage(client, filledTemplate, patient['phone_number'])
+                    sendMessage(client, filledTemplate, patient['phone_number'])
                     messagesSent += 1
                 else:
                     continue

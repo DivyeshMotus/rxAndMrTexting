@@ -6,6 +6,7 @@ def getAllPatientsToText(dbCursor):
             s.story_id,
             c.contact_id,
             s.age_id,
+            ins.created_at,
             s.status,
             i.product,
             c.first_name,
@@ -15,6 +16,13 @@ def getAllPatientsToText(dbCursor):
         ON c.contact_id = s.destination
         LEFT JOIN insurance_fresh AS i
         ON i.insurance_id = s.story_id
+        left join (
+        select distinct on (insurance_id)
+        	insurance_id, created_at
+    		from insurance
+    		order by insurance_id, created_at asc
+		) ins
+			on ins.insurance_id = s.story_id
         WHERE s.type = 'insurance'
         AND s.status IN (
             'needPrescriptionOnly',

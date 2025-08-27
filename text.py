@@ -19,24 +19,44 @@ def createConnection():
     gameDbCur = gameDbConn.cursor()
     return gameDbConn, gameDbCur
 
+def convertToUtc(ts):
+    if ts is None or (isinstance(ts, float) and pd.isna(ts)):
+        return None
+    t = pd.Timestamp(ts)
+    if t.tzinfo is None or t.tz is None:
+        return t.tz_localize('UTC')
+    return t.tz_convert('UTC')
+
 def calculatePatientDurationInPipeline(patient, dbCursor):
     durationInDays = -1
     if pd.isna(patient['age_id']):
-        durationInDays = 15
+        nowUtc = pd.Timestamp.now(tz='UTC')
+        convertedCreatedAt = convertToUtc(patient['created_at'])
+        differenceInTimes = nowUtc - convertedCreatedAt
+        durationInDays = differenceInTimes.days
+        if durationInDays == 0:
+            return -1
     else:
         patientBeginTime = getStatusBeginTime(patient['age_id'], dbCursor)
-        # print(f"Story_id: {patient['story_id']}, Being Time: {patientBeginTime}")
-        now_utc = datetime.now(timezone.utc)
-        differenceInTimes = now_utc - patientBeginTime
+        nowUtc = datetime.now(timezone.utc)
+        differenceInTimes = nowUtc - patientBeginTime
         durationInDays = differenceInTimes.days
         if durationInDays == 0:
             return -1
     return durationInDays
 
 def fillTemplate(template, patient):
+    product = ''
+    if patient['product'] == None:
+        product = "Motus Hand or Foot"
+    elif 'hand' in patient['product'].lower():
+        product = "Motus Hand"
+    else:
+        product = "Motus Foot"
+    
     return template.format(
         first_name=patient['first_name'],
-        product=patient['product']
+        product=product
     )
 
 def sendMessage(client, filledTemplate, phoneNumber):    
@@ -54,6 +74,8 @@ def main():
     dbConnection, dbCursor = createConnection()
     patientsToText = getAllPatientsToText(dbCursor)
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    messagesSent = 0
+    readyMessages = pd.DataFrame()
     for index, patient in patientsToText.iterrows():
         if not (pd.isna(patient['first_name']) or pd.isna(patient['phone_number']) or pd.isna(patient['contact_id'])):
             optedOut = hasPatientOptedOut(patient['contact_id'], dbCursor)
@@ -63,14 +85,18 @@ def main():
                 template = getTemplateFromDb(templateName, dbCursor)
                 if template != None:
                     filledTemplate = fillTemplate(template, patient)
-                    sendMessage(client, filledTemplate, patient['phone_number'])
+                    # patient_dict = {'Contact_Id': patient['contact_id'], 'Template Name': templateName, 'Text Message': filledTemplate}
+                    # readyMessages = pd.concat([readyMessages, pd.DataFrame([patient_dict])], ignore_index = True)
+                    print(f"Insurance ID: {patient['story_id']}; Contact ID: {patient['contact_id']}; Template: {templateName}")
+                    # sendMessage(client, filledTemplate, patient['phone_number'])
+                    messagesSent += 1
                 else:
                     continue
             else:
                 continue
         else:
             continue
-        
+    sendMessage(client, f"Sent {messagesSent} RX and MR Messages today", "4704495817")
     dbCursor.close()
     dbConnection.close()
 

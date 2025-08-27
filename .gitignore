@@ -3,3 +3,5 @@ database.ini
 game_db_utils
 patientsToText.csv
 config.py
+readyMessages.csv
+run.sh
